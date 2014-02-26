@@ -43,7 +43,11 @@ public class OwnFolderIcon extends FolderIcon {
     }
 
     public String getImageOf(String size) {
+<<<<<<< fb3eb17a7f4b53342c1375175bc40f97083d6c73
         return "/ownimages/"+size+"/"+_myself.getName()+".png";
+=======
+        return Stapler.getCurrentRequest().getContextPath()+ Hudson.RESOURCE_PATH+"/plugin/cloudbees-folder/images/own/"+_myself.getName()+".png";
+>>>>>>> Change method to show folder icons
     }
 
     @Override

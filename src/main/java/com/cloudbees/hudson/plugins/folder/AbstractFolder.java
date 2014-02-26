@@ -110,7 +110,7 @@ import org.kohsuke.stapler.interceptor.RequirePOST;
  * <b>Extending Folders UI</b><br>
  * As any other {@link Item} type, folder types support extension of UI via {@link Action}s.
  * These actions can be persisted or added via {@link TransientActionFactory}.
- * See <a href="https://wiki.jenkins-ci.org/display/JENKINS/Action+and+its+family+of+subtypes">this page</a> 
+ * See <a href="https://wiki.jenkins-ci.org/display/JENKINS/Action+and+its+family+of+subtypes">this page</a>
  * for more details about actions.
  * In folders actions provide the following features:
  * <ul>
