@@ -43,7 +43,7 @@ public class OwnFolderIcon extends FolderIcon {
     }
 
     public String getImageOf(String size) {
-        return Stapler.getCurrentRequest().getContextPath()+ Hudson.RESOURCE_PATH+"/plugin/cloudbees-folder/images/own/"+_myself.getName()+".png";
+        return "/ownimages/"+size+"/"+_myself.getName()+".png";
     }
 
     @Override
