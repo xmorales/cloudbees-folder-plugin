@@ -1,7 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 The MIT License
 
-Copyright 2013 CloudBees.
+Copyright 2014 Jesse Glick.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -21,17 +22,9 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 -->
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout"
-         xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:i="jelly:fmt" xmlns:this="this">
-  <j:set var="url" value="${h.getNearestAncestorUrl(request,it)}"/>
-  <l:task icon="images/24x24/up.png" href="${url}/../../" title="${%Up}" contextMenu="false"/>
-  <l:task icon="images/24x24/search.png"  href="${url}/" title="${%Status}" contextMenu="false" />
-  <j:choose>
-    <j:when test="${h.hasPermission(it,it.CONFIGURE)}">
-      <l:task icon="images/24x24/setting.png" href="${url}/configure" title="${%Configure}" />
-    </j:when>
-    <j:when test="${h.hasPermission(it,it.EXTENDED_READ)}">
-      <l:task icon="images/24x24/setting.png" href="${url}/configure" title="${%View Configuration}" />
-    </j:when>
-  </j:choose>
+
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler">
+    <st:include page="/hudson/model/AbstractItem/_api.jelly"/>
+    <st:include page="/hudson/model/ModifiableItemGroup/_api.jelly" optional="true"/> <!-- TODO remove optional when on 1.569+ -->
 </j:jelly>

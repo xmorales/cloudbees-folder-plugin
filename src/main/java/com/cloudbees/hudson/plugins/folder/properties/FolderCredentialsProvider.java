@@ -48,6 +48,7 @@ import hudson.model.Item;
 import hudson.model.ItemGroup;
 import hudson.model.ModelObject;
 import hudson.security.ACL;
+import hudson.security.AccessDeniedException2;
 import hudson.security.Permission;
 import hudson.util.CopyOnWriteMap;
 import jenkins.model.Jenkins;
@@ -252,12 +253,14 @@ public class FolderCredentialsProvider extends CredentialsProvider {
         }
 
         /**
-         * Short-cut method for {@link Jenkins#checkPermission(hudson.security.Permission)}
+         * Short-cut method for checking {@link CredentialsStore#hasPermission(hudson.security.Permission)}
          *
          * @param p the permission to check.
          */
         private void checkPermission(Permission p) {
-            Jenkins.getInstance().checkPermission(p);
+            if (!store.hasPermission(p)) {
+                throw new AccessDeniedException2(Jenkins.getAuthentication(), p);
+            }
         }
 
         /**
@@ -359,7 +362,7 @@ public class FolderCredentialsProvider extends CredentialsProvider {
          */
         @NonNull
         private synchronized List<Credentials> getCredentials(@NonNull Domain domain) {
-            if (Jenkins.getInstance().hasPermission(CredentialsProvider.VIEW)) {
+            if (store.hasPermission(CredentialsProvider.VIEW)) {
                 List<Credentials> list = getDomainCredentialsMap().get(domain);
                 if (list == null || list.isEmpty()) {
                     return Collections.emptyList();
