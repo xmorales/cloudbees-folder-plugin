@@ -27,9 +27,6 @@ THE SOFTWARE.
     <img src="${it.iconColor.getImageOf('48x48')}" width="48" height="48" alt="${it.iconColor.description}" tooltip="${it.iconColor.description}" />
     ${it.displayName}
   </h1>
-  <j:if test="${it.name != it.displayName}">
-    ${%Folder name}: ${it.fullName}
-  </j:if>
   <div id="view-message">
       <div id="systemmessage">
           <j:out value="${app.systemMessage!=null ? app.markupFormatter.translate(app.systemMessage) : ''}"/>
