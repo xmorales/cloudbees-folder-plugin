@@ -24,9 +24,9 @@
 
 package com.cloudbees.hudson.plugins.folder.properties;
 
-import com.cloudbees.hudson.plugins.folder.Folder;
-import com.cloudbees.hudson.plugins.folder.FolderProperty;
-import com.cloudbees.hudson.plugins.folder.FolderPropertyDescriptor;
+import com.cloudbees.hudson.plugins.folder.AbstractFolder;
+import com.cloudbees.hudson.plugins.folder.AbstractFolderProperty;
+import com.cloudbees.hudson.plugins.folder.AbstractFolderPropertyDescriptor;
 import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
@@ -40,6 +40,7 @@ import com.cloudbees.plugins.credentials.domains.DomainSpecification;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.DescriptorExtensionList;
 import hudson.Extension;
 import hudson.model.Action;
@@ -65,6 +66,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import jenkins.model.TransientActionFactory;
 
 /**
  * A store of credentials that can be used as a Stapler opbject.
@@ -77,7 +79,7 @@ public class FolderCredentialsProvider extends CredentialsProvider {
 
     @Override
     public Set<CredentialsScope> getScopes(ModelObject object) {
-        if (object instanceof Folder) {
+        if (object instanceof AbstractFolder) {
             return SCOPES;
         }
         return super.getScopes(object);
@@ -101,8 +103,8 @@ public class FolderCredentialsProvider extends CredentialsProvider {
         List<C> result = new ArrayList<C>();
         if (ACL.SYSTEM.equals(authentication)) {
             while (itemGroup != null) {
-                if (itemGroup instanceof Folder) {
-                    final Folder folder = Folder.class.cast(itemGroup);
+                if (itemGroup instanceof AbstractFolder) {
+                    final AbstractFolder<?> folder = AbstractFolder.class.cast(itemGroup);
                     FolderCredentialsProperty property = folder.getProperties().get(FolderCredentialsProperty.class);
                     if (property != null) {
                         result.addAll(DomainCredentials.getCredentials(
@@ -124,8 +126,8 @@ public class FolderCredentialsProvider extends CredentialsProvider {
 
     @Override
     public CredentialsStore getStore(@CheckForNull ModelObject object) {
-        if (object instanceof Folder) {
-            final Folder folder = Folder.class.cast(object);
+        if (object instanceof AbstractFolder) {
+            final AbstractFolder<?> folder = AbstractFolder.class.cast(object);
             FolderCredentialsProperty property = folder.getProperties().get(FolderCredentialsProperty.class);
             if (property != null) {
                 return property.getStore();
@@ -134,7 +136,7 @@ public class FolderCredentialsProvider extends CredentialsProvider {
         return null;
     }
 
-    public static class FolderCredentialsProperty extends FolderProperty<Folder> {
+    public static class FolderCredentialsProperty extends AbstractFolderProperty<AbstractFolder<?>> {
 
         /**
          * Old store of credentials
@@ -184,6 +186,7 @@ public class FolderCredentialsProvider extends CredentialsProvider {
          *
          * @since 1.5
          */
+        @SuppressFBWarnings(value = "IS2_INCONSISTENT_SYNC", justification = "Only unprotected during deserialization")
         @SuppressWarnings("deprecation")
         private Object readResolve() throws ObjectStreamException {
             if (domainCredentialsMap == null) {
@@ -411,20 +414,33 @@ public class FolderCredentialsProvider extends CredentialsProvider {
             return false;
         }
 
-        @NonNull
-        @Override
-        public Collection<? extends Action> getFolderActions() {
-            return Collections.singleton(new CredentialsStoreAction() {
-                @NonNull
-                @Override
-                public CredentialsStore getStore() {
-                    return FolderCredentialsProperty.this.getStore();
+        @SuppressWarnings({"unchecked", "rawtypes"}) // erasure
+        @Extension
+        public static class ActionFactory extends TransientActionFactory<AbstractFolder> {
+            @Override
+            public Class<AbstractFolder> type() {
+                return AbstractFolder.class;
+            }
+            @Override
+            public Collection<? extends Action> createFor(AbstractFolder target) {
+                final FolderCredentialsProperty prop = ((AbstractFolder<?>) target).getProperties().get(FolderCredentialsProperty.class);
+                if (prop != null) {
+                    return Collections.singleton(new CredentialsStoreAction() {
+                        @NonNull
+                        @Override
+                        public CredentialsStore getStore() {
+                            return prop.getStore();
+                        }
+                    });
+                } else {
+                    return Collections.emptySet();
                 }
-            });
+            }
+
         }
 
         @Extension
-        public static class DescriptorImpl extends FolderPropertyDescriptor {
+        public static class DescriptorImpl extends AbstractFolderPropertyDescriptor {
 
             @Override
             public String getDisplayName() {
@@ -459,7 +475,7 @@ public class FolderCredentialsProvider extends CredentialsProvider {
             @SuppressWarnings("unused") // used by stapler
             public DescriptorExtensionList<DomainSpecification, Descriptor<DomainSpecification>>
             getSpecificationDescriptors() {
-                return Jenkins.getInstance().getDescriptorList(DomainSpecification.class);
+                return Jenkins.getActiveInstance().getDescriptorList(DomainSpecification.class);
             }
         }
 
