@@ -27,7 +27,7 @@ package com.cloudbees.hudson.plugins.folder;
 import com.cloudbees.hudson.plugins.folder.computed.ComputedFolder;
 import com.cloudbees.hudson.plugins.folder.health.FolderHealthMetric;
 import com.cloudbees.hudson.plugins.folder.health.FolderHealthMetricDescriptor;
-import com.cloudbees.hudson.plugins.folder.icons.StockFolderIcon;
+import com.cloudbees.hudson.plugins.folder.icons.OwnFolderIcon;
 import com.cloudbees.hudson.plugins.folder.properties.AuthorizationMatrixProperty;
 import hudson.AbortException;
 import hudson.BulkChange;
