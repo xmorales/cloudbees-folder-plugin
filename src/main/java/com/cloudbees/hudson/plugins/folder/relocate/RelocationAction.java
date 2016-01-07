@@ -25,35 +25,28 @@
 package com.cloudbees.hudson.plugins.folder.relocate;
 
 import com.cloudbees.hudson.plugins.folder.Messages;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
 import hudson.model.Action;
-import hudson.model.Failure;
 import hudson.model.Item;
 import hudson.model.ItemGroup;
 import hudson.security.Permission;
 import hudson.security.PermissionScope;
-import hudson.util.HttpResponses;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
-import jenkins.model.Jenkins;
 import jenkins.model.TransientActionFactory;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
-import org.kohsuke.stapler.HttpResponse;
-import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.interceptor.RequirePOST;
+import org.kohsuke.stapler.StaplerFallback;
+
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
+import java.util.Collection;
+import java.util.Collections;
 
 /**
  * Does the actual work of relocating an item.
  */
 @Restricted(NoExternalUse.class)
-public class RelocationAction implements Action {
+public class RelocationAction implements Action, StaplerFallback {
 
     /**
      * The permission required to move an item.
@@ -66,33 +59,51 @@ public class RelocationAction implements Action {
     private final Item item;
 
     /**
+     * The UI to use for the relocation action.
+     *
+     * @since 4.9
+     */
+    @CheckForNull
+    private final RelocationUI ui;
+
+    /**
      * Creates an instance of this action.
      *
      * @param item the item that would be moved.
      */
-    public RelocationAction(Item item) {
+    public RelocationAction(@Nonnull Item item) {
         this.item = item;
+        this.ui = RelocationUI.for_(item);
     }
 
-    @Override public String getIconFileName() {
-        if (!item.hasPermission(RELOCATE)) {
-            return null;
-        }
-        for (RelocationHandler handler : Jenkins.getInstance().getExtensionList(RelocationHandler.class)) {
-            if (handler.applicability(item) == RelocationHandler.HandlingMode.HANDLE) {
-                return "/plugin/cloudbees-folder/images/24x24/move.png";
-            }
-        }
-        // No actual handler, so just hide.
-        return null;
+    public RelocationAction(@Nonnull Item item, @Nonnull RelocationUI ui) {
+        this.item = item;
+        this.ui = ui;
     }
 
-    @Override public String getDisplayName() {
-        return Messages.RelocateAction_displayName();
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override 
+    public String getIconFileName() {
+        return !item.hasPermission(RELOCATE) || ui == null || !ui.isAvailable(item) ? null : ui.getIconFileName();
     }
 
-    @Override public String getUrlName() {
-        return "move";
+    /**
+     * {@inheritDoc}
+     */
+    @Override 
+    public String getDisplayName() {
+        return ui == null ? null : ui.getDisplayName();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override 
+    public String getUrlName() {
+        return ui == null ? null : ui.getUrlName();
     }
 
     /**
@@ -105,6 +116,25 @@ public class RelocationAction implements Action {
     }
 
     /**
+     * Getter for the UI to display in this action.
+     *
+     * @return the UI to display in this action or {@code null} if not supported.
+     * @since 4.9
+     */
+    @CheckForNull
+    public RelocationUI getUi() {
+        return ui;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Object getStaplerFallback() {
+        return ui;
+    }
+
+    /**
      * Avoids a CCE caused by return type ambiguity in script access.
      * @return {@link Item#getParent} of {@link #getItem}
      */
@@ -113,60 +143,9 @@ public class RelocationAction implements Action {
     }
 
     /**
-     * Gets the list of destinations that the item can be moved to by the current user.
-     *
-     * @return the list of destinations that the item can be moved to by the current user.
-     */
-    public Collection<ItemGroup<?>> getDestinations() {
-        Collection<ItemGroup<?>> result = new LinkedHashSet<ItemGroup<?>>();
-        for (RelocationHandler handler : Jenkins.getInstance().getExtensionList(RelocationHandler.class)) {
-            if (handler.applicability(item) == RelocationHandler.HandlingMode.HANDLE) {
-                result.addAll(handler.validDestinations(item));
-            }
-        }
-        return result;
-    }
-
-    /**
-     * Does the move.
-     *
-     * @param req         the request.
-     * @param destination the destination.
-     * @return the response.
-     */
-    @RequirePOST
-    public HttpResponse doMove(StaplerRequest req, @QueryParameter String destination) throws IOException, InterruptedException {
-        item.checkPermission(RELOCATE);
-        ItemGroup dest = null;
-        for (ItemGroup itemGroup : getDestinations()) {
-            if (("/" + itemGroup.getFullName()).equals(destination)) {
-                dest = itemGroup;
-                break;
-            }
-        }
-        if (dest == null || dest == item.getParent()) {
-            return HttpResponses.forwardToPreviousPage();
-        }
-        List<RelocationHandler> chain = new ArrayList<RelocationHandler>();
-        for (RelocationHandler handler : Jenkins.getInstance().getExtensionList(RelocationHandler.class)) {
-            if (handler.applicability(item) != RelocationHandler.HandlingMode.SKIP) {
-                chain.add(handler);
-            }
-        }
-        if (chain.isEmpty()) {
-            return new Failure("no known way to handle " + item);
-        }
-        HttpResponse response = chain.get(0).handle(item, dest, new AtomicReference<Item>(), chain.subList(1, chain.size()));
-        if (response != null) {
-            return response;
-        } else {
-            return HttpResponses.forwardToPreviousPage();
-        }
-    }
-
-    /**
      * Makes sure that {@link Item}s have the action.
      */
+    @SuppressFBWarnings(value = "RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT", justification = "ensure loaded eagerly")
     @Extension
     public static class TransientActionFactoryImpl extends TransientActionFactory<Item> {
 
@@ -179,7 +158,7 @@ public class RelocationAction implements Action {
         }
 
         @Override
-        public Collection<? extends Action> createFor(Item target) {
+        public Collection<? extends Action> createFor(@Nonnull Item target) {
             return Collections.singleton(new RelocationAction(target));
         }
     }
