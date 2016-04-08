@@ -36,8 +36,7 @@ import hudson.model.ListView;
 import hudson.model.User;
 import hudson.search.SearchItem;
 import hudson.security.ACL;
-import hudson.security.AuthorizationMatrixProperty;
-import hudson.security.ProjectMatrixAuthorizationStrategy;
+import hudson.security.WhoAmI;
 import hudson.tasks.BuildTrigger;
 import hudson.views.BuildButtonColumn;
 import hudson.views.JobColumn;
@@ -53,6 +52,7 @@ import static org.junit.Assert.*;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.MockAuthorizationStrategy;
 import org.jvnet.hudson.test.SleepBuilder;
 import org.jvnet.hudson.test.recipes.LocalData;
 
@@ -130,7 +130,7 @@ public class FolderTest {
     }
 
     private void copyFromGUI(Folder f, JenkinsRule.WebClient wc, String fromName, String toName) throws Exception {
-        HtmlPage page = wc.getPage(f, "new");
+        HtmlPage page = wc.getPage(f, "newJob");
         ((HtmlInput)page.getElementById("name")).setValueAttribute(toName);
         HtmlInput fe = (HtmlInput) page.getElementById("from");
         fe.focus();
@@ -246,17 +246,13 @@ public class FolderTest {
 
     @Test public void discoverPermission() throws Exception {
         r.jenkins.setSecurityRealm(r.createDummySecurityRealm());
-        ProjectMatrixAuthorizationStrategy as = new ProjectMatrixAuthorizationStrategy();
-        as.add(Jenkins.READ, "anonymous");
-        as.add(Jenkins.READ, "authenticated");
-        as.add(Item.DISCOVER, "authenticated");
-        r.jenkins.setAuthorizationStrategy(as);
         final Folder d = r.jenkins.createProject(Folder.class, "d");
-        /* Cannot make test be meaningful unless using matrix-auth 1.2 and setting blocksInheritance on h.s.AMP on both p1 & p2:
-        d.addProperty(new com.cloudbees.hudson.plugins.folder.properties.AuthorizationMatrixProperty(Collections.singletonMap(Item.READ, new HashSet<String>(Arrays.asList("anonymous", "authenticated")))));
-        */
         final FreeStyleProject p1 = d.createProject(FreeStyleProject.class, "p1");
-        p1.addProperty(new AuthorizationMatrixProperty(Collections.singletonMap(Item.READ, Collections.singleton("alice"))));
+        r.jenkins.setAuthorizationStrategy(new MockAuthorizationStrategy().
+                grant(Jenkins.READ).everywhere().toEveryone().
+                grant(Item.DISCOVER).everywhere().toAuthenticated().
+                grant(Item.READ).onItems(d).toEveryone().
+                grant(Item.READ).onItems(p1).to("alice"));
         FreeStyleProject p2 = d.createProject(FreeStyleProject.class, "p2");
         ACL.impersonate(Jenkins.ANONYMOUS, new Runnable() {
             @Override public void run() {
@@ -277,6 +273,13 @@ public class FolderTest {
                 }
             }
         });
+    }
+
+    @Test public void addAction() throws Exception {
+        Folder f = createFolder();
+        WhoAmI a = new WhoAmI();
+        f.addAction(a);
+        assertNotNull(f.getAction(WhoAmI.class));
     }
 
     private Folder createFolder() throws IOException {
