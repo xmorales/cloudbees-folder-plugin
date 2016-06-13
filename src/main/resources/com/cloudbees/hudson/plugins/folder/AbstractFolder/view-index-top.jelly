@@ -30,6 +30,11 @@ THE SOFTWARE.
       </div>
       <j:out value="${it.description!=null ? app.markupFormatter.translate(it.description) : ''}"/>
   </div>
+  <!-- give actions a chance to contribute summary item -->
+  <j:forEach var="a" items="${it.allActions}">
+    <st:include page="summary" from="${a}" optional="true" it="${a}" />
+  </j:forEach>
+  <this:description />
   <h1>
     <img src="${it.iconColor.getImageOf('48x48')}" width="48" height="48" alt="${it.iconColor.description}" tooltip="${it.iconColor.description}" />
     ${it.displayName}
