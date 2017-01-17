@@ -42,6 +42,9 @@ import hudson.util.AlternativeUiTextProvider;
 import hudson.util.DescribableList;
 import hudson.views.ListViewColumn;
 import hudson.views.ViewJobFilter;
+import org.jenkins.ui.icon.Icon;
+import org.jenkins.ui.icon.IconSet;
+import org.jenkins.ui.icon.IconSpec;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
@@ -350,20 +353,21 @@ public class Folder extends AbstractFolder<TopLevelItem> implements DirectlyModi
             return Messages.Folder_Description();
         }
 
-        /**
-         * Needed if it wants Folder are categorized in Jenkins 2.x.
-         *
-         * TODO: Override when the baseline is upgraded to 2.x
-         *
-         * @return A string it represents a URL pattern to get the Item icon in different sizes.
-         */
-        public String getIconFilePathPattern() {
-            return "plugin/cloudbees-folder/images/:size/folder.png";
-        }
-
         @Override
         public TopLevelItem newInstance(ItemGroup parent, String name) {
             return new Folder(parent, name);
+        }
+
+        static {
+            IconSet.icons.addIcon(new Icon("icon-item-move-folder icon-sm", "plugin/cloudbees-folder/images/16x16/move.png", Icon.ICON_SMALL_STYLE));
+            IconSet.icons.addIcon(new Icon("icon-item-move-folder icon-md", "plugin/cloudbees-folder/images/24x24/move.png", Icon.ICON_MEDIUM_STYLE));
+            IconSet.icons.addIcon(new Icon("icon-item-move-folder icon-lg", "plugin/cloudbees-folder/images/32x32/move.png", Icon.ICON_LARGE_STYLE));
+            IconSet.icons.addIcon(new Icon("icon-item-move-folder icon-xlg", "plugin/cloudbees-folder/images/48x48/move.png", Icon.ICON_XLARGE_STYLE));
+            // fix the IconSet defaults because some of them are .gif files and icon-folder should really be here and not in core
+            IconSet.icons.addIcon(new Icon("icon-folder icon-sm", "plugin/cloudbees-folder/images/16x16/folder.png", Icon.ICON_SMALL_STYLE));
+            IconSet.icons.addIcon(new Icon("icon-folder icon-md", "plugin/cloudbees-folder/images/24x24/folder.png", Icon.ICON_MEDIUM_STYLE));
+            IconSet.icons.addIcon(new Icon("icon-folder icon-lg", "plugin/cloudbees-folder/images/32x32/folder.png", Icon.ICON_LARGE_STYLE));
+            IconSet.icons.addIcon(new Icon("icon-folder icon-xlg", "plugin/cloudbees-folder/images/48x48/folder.png", Icon.ICON_XLARGE_STYLE));
         }
 
     }
