@@ -288,13 +288,6 @@ public abstract class AbstractFolder<I extends TopLevelItem> extends AbstractIte
                 }
             }
         };
-        if (views.isEmpty()) {
-            try {
-                initViews(views);
-            } catch (IOException e) {
-                LOGGER.log(Level.WARNING, "Failed to set up the initial view", e);
-            }
-        }
         if (healthMetrics == null) {
             List<FolderHealthMetric> metrics = new ArrayList<FolderHealthMetric>();
             for (FolderHealthMetricDescriptor d : FolderHealthMetricDescriptor.all()) {

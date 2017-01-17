@@ -24,15 +24,6 @@
 package com.cloudbees.hudson.plugins.folder.computed;
 
 import com.cloudbees.hudson.plugins.folder.AbstractFolderDescriptor;
-<<<<<<< HEAD
-import hudson.AbortException;
-import hudson.model.FreeStyleBuild;
-import hudson.model.FreeStyleProject;
-import hudson.model.ItemGroup;
-import hudson.model.Result;
-import hudson.model.TaskListener;
-import hudson.model.TopLevelItem;
-=======
 import com.cloudbees.hudson.plugins.folder.views.AbstractFolderViewHolder;
 import com.gargoylesoftware.htmlunit.html.DomElement;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
@@ -53,25 +44,17 @@ import hudson.model.View;
 import hudson.model.ViewGroup;
 import hudson.views.DefaultViewsTabBar;
 import hudson.views.ViewsTabBar;
->>>>>>> 152375c01d782d43d8b1c40983f7d53f6179bf6a
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-<<<<<<< HEAD
-=======
 import java.util.Collections;
->>>>>>> 152375c01d782d43d8b1c40983f7d53f6179bf6a
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-<<<<<<< HEAD
-import org.apache.commons.lang.StringUtils;
-import org.junit.Test;
-=======
 import javax.servlet.ServletException;
 import org.apache.commons.lang.StringUtils;
 import org.junit.Test;
@@ -80,18 +63,14 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
->>>>>>> 152375c01d782d43d8b1c40983f7d53f6179bf6a
 import static org.junit.Assert.*;
 import org.junit.Rule;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.SleepBuilder;
 import org.jvnet.hudson.test.TestExtension;
-<<<<<<< HEAD
-=======
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
->>>>>>> 152375c01d782d43d8b1c40983f7d53f6179bf6a
 
 public class ComputedFolderTest {
 
@@ -195,8 +174,6 @@ public class ComputedFolderTest {
         org.assertItemNames("C+D");
     }
 
-<<<<<<< HEAD
-=======
     @Test
     public void viewHolderRestrictions() throws Exception {
         LockedDownSampleComputedFolder org = r.jenkins.createProject(LockedDownSampleComputedFolder.class, "org");
@@ -336,7 +313,6 @@ public class ComputedFolderTest {
         assertThat(org.round, is(round));
     }
 
->>>>>>> 152375c01d782d43d8b1c40983f7d53f6179bf6a
     @SuppressWarnings({"unchecked", "rawtypes"})
     public static class SampleComputedFolder extends ComputedFolder<FreeStyleProject> {
 
@@ -413,8 +389,6 @@ public class ComputedFolderTest {
 
     }
 
-<<<<<<< HEAD
-=======
     public static class LockedDownSampleComputedFolder extends SampleComputedFolder {
 
         private LockedDownSampleComputedFolder(ItemGroup parent, String name) {
@@ -521,7 +495,6 @@ public class ComputedFolderTest {
         }
     }
 
->>>>>>> 152375c01d782d43d8b1c40983f7d53f6179bf6a
     private static String doRecompute(ComputedFolder<?> d, Result result) throws Exception {
         d.scheduleBuild2(0).getFuture().get();
         FolderComputation<?> computation = d.getComputation();

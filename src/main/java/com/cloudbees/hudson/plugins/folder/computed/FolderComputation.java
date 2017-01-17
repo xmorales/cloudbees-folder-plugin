@@ -42,9 +42,6 @@ import hudson.model.StreamBuildListener;
 import hudson.model.TaskListener;
 import hudson.model.TopLevelItem;
 import hudson.model.listeners.SaveableListener;
-import hudson.util.AlternativeUiTextProvider;
-import hudson.util.AlternativeUiTextProvider.Message;
-import hudson.util.io.ReopenableRotatingFileOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -59,7 +56,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
-
 import hudson.util.AlternativeUiTextProvider;
 import hudson.util.AlternativeUiTextProvider.Message;
 import hudson.util.io.ReopenableRotatingFileOutputStream;
