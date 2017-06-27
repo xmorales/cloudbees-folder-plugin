@@ -5,12 +5,12 @@
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>2.19</version>
+    <version>2.21</version>
     <relativePath />
   </parent>
 
   <artifactId>cloudbees-folder</artifactId>
-  <version>5.17-SNAPSHOT</version>
+  <version>6.0.5-SNAPSHOT</version>
   <packaging>hpi</packaging>
 
   <name>Folders Plugin</name>
@@ -19,9 +19,8 @@
   </description>
   <url>https://wiki.jenkins-ci.org/display/JENKINS/CloudBees+Folders+Plugin</url>
   <properties>
-    <jenkins.version>1.609.1</jenkins.version>
-    <java.level>6</java.level>
-    <jenkins-test-harness.version>2.3</jenkins-test-harness.version>
+    <jenkins.version>1.642.3</jenkins.version>
+    <jenkins-test-harness.version>2.18</jenkins-test-harness.version>
     <no-test-jar>false</no-test-jar>
   </properties>
   <licenses>
@@ -55,7 +54,7 @@
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>credentials</artifactId>
-      <version>2.1.0</version>
+      <version>2.1.11</version>
       <optional>true</optional>
     </dependency>
     <dependency>

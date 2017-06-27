@@ -24,11 +24,16 @@
 
 package com.cloudbees.hudson.plugins.folder.computed;
 
+import com.infradna.tool.bridge_method_injector.WithBridgeMethods;
+import com.jcraft.jzlib.GZIPInputStream;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.AbortException;
 import hudson.BulkChange;
 import hudson.Util;
 import hudson.XmlFile;
 import hudson.console.AnnotatedLargeText;
+import hudson.console.PlainTextConsoleOutputStream;
+import hudson.model.Action;
 import hudson.model.Actionable;
 import hudson.model.BallColor;
 import hudson.model.Cause;
@@ -42,9 +47,18 @@ import hudson.model.StreamBuildListener;
 import hudson.model.TaskListener;
 import hudson.model.TopLevelItem;
 import hudson.model.listeners.SaveableListener;
+import hudson.model.queue.CauseOfBlockage;
+import hudson.model.queue.QueueTaskDispatcher;
+import hudson.util.AlternativeUiTextProvider;
+import hudson.util.AlternativeUiTextProvider.Message;
+import hudson.util.StreamTaskListener;
+import hudson.util.io.ReopenableRotatingFileOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -52,15 +66,18 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
-import hudson.util.AlternativeUiTextProvider;
-import hudson.util.AlternativeUiTextProvider.Message;
-import hudson.util.io.ReopenableRotatingFileOutputStream;
+import net.jcip.annotations.GuardedBy;
 import org.apache.commons.io.Charsets;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.jelly.XMLOutput;
+import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.StaplerResponse;
 import org.kohsuke.stapler.framework.io.ByteBuffer;
 
 /**
@@ -91,6 +108,11 @@ public class FolderComputation<I extends TopLevelItem> extends Actionable implem
     @CheckForNull
     private transient final FolderComputation<I> previous;
 
+    /** The events output stream handler */
+    @CheckForNull
+    @GuardedBy("this")
+    private transient EventOutputStreams eventStreams;
+
     /** The result of the build, if finished. */
     @CheckForNull
     private volatile Result result;
@@ -118,6 +140,7 @@ public class FolderComputation<I extends TopLevelItem> extends Actionable implem
         StreamBuildListener listener;
         try {
             File logFile = getLogFile();
+            FileUtils.forceMkdir(logFile.getParentFile());
             OutputStream os;
             if (BACKUP_LOG_COUNT != null) {
                 os = new ReopenableRotatingFileOutputStream(logFile, BACKUP_LOG_COUNT);
@@ -193,19 +216,45 @@ public class FolderComputation<I extends TopLevelItem> extends Actionable implem
         return new File(folder.getComputationDir(), "events.log");
     }
 
-    public TaskListener createEventsListener() throws IOException {
+    @WithBridgeMethods(TaskListener.class)
+    @Nonnull
+    public synchronized StreamTaskListener createEventsListener() {
         File eventsFile = getEventsFile();
-        boolean rotate = eventsFile.length() > EVENT_LOG_MAX_SIZE * 1024;
-        OutputStream os;
-        if (BACKUP_LOG_COUNT != null) {
-            os = new ReopenableRotatingFileOutputStream(eventsFile, BACKUP_LOG_COUNT);
-            if (rotate) {
-                ((ReopenableRotatingFileOutputStream) os).rewind();
-            }
-        } else {
-            os = new FileOutputStream(eventsFile, !rotate);
+        if (!eventsFile.getParentFile().isDirectory() && !eventsFile.getParentFile().mkdirs()) {
+            LOGGER.log(Level.WARNING, "Could not create directory {0} for {1}",
+                    new Object[]{eventsFile.getParentFile(), folder.getFullName()});
+            // TODO return a StreamTaskListener sending output to a log, for now this will just try and fail to write
         }
-        return new StreamBuildListener(os, Charsets.UTF_8);
+        if (eventStreams == null) {
+            eventStreams = new EventOutputStreams(new EventOutputStreams.OutputFile() {
+                @NonNull
+                @Override
+                public File get() {
+                    return getEventsFile();
+                }
+
+                @Override
+                public boolean canWriteNow() {
+                    // TODO rework once JENKINS-42248 is solved
+                    GregorianCalendar timestamp = new GregorianCalendar();
+                    timestamp.setTimeInMillis(System.currentTimeMillis() - 10000L);
+                    Queue.Item probe = new Queue.WaitingItem(timestamp, folder, Collections.<Action>emptyList());
+                    for (QueueTaskDispatcher d: QueueTaskDispatcher.all()) {
+                        if (d.canRun(probe) != null) {
+                            return false;
+                        }
+                    }
+                    return true;
+                }
+            },
+                    250, TimeUnit.MILLISECONDS,
+                    1024,
+                    true,
+                    EVENT_LOG_MAX_SIZE * 1024,
+                    BACKUP_LOG_COUNT == null ? 0 : Math.max(0, BACKUP_LOG_COUNT)
+            );
+        }
+        return new StreamTaskListener(eventStreams.get(), Charsets.UTF_8);
     }
 
     @Nonnull
@@ -303,6 +352,48 @@ public class FolderComputation<I extends TopLevelItem> extends Actionable implem
             logText = getLogText();
             pos = logText.writeLogTo(pos, out);
         } while (!logText.isComplete());
+    }
+
+    /**
+     * Sends out the raw console output.
+     */
+    public void doConsoleText(StaplerRequest req, StaplerResponse rsp) throws IOException {
+        rsp.setContentType("text/plain;charset=UTF-8");
+        PlainTextConsoleOutputStream out = new PlainTextConsoleOutputStream(rsp.getCompressedOutputStream(req));
+        InputStream input = getLogInputStream();
+        try {
+            IOUtils.copy(input, out);
+            out.flush();
+        } finally {
+            IOUtils.closeQuietly(input);
+            IOUtils.closeQuietly(out);
+        }
+    }
+
+    /**
+     * Returns an input stream that reads from the log file.
+     * It will use a gzip-compressed log file (log.gz) if that exists.
+     *
+     * @return An input stream from the log file.
+     * If the log file does not exist, the error message will be returned to the output.
+     * @throws IOException if things go wrong
+     */
+    @Nonnull
+    public InputStream getLogInputStream() throws IOException {
+        File logFile = getLogFile();
+
+        if (logFile.exists()) {
+            // Checking if a ".gz" file was return
+            FileInputStream fis = new FileInputStream(logFile);
+            if (logFile.getName().endsWith(".gz")) {
+                return new GZIPInputStream(fis);
+            } else {
+                return fis;
+            }
+        }
+
+        String message = "No such file: " + logFile;
+        return new ByteArrayInputStream(message.getBytes(Charsets.UTF_8));
     }
 
     @CheckForNull
