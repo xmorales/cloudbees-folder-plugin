@@ -27,6 +27,7 @@ package com.cloudbees.hudson.plugins.folder;
 import com.cloudbees.hudson.plugins.folder.computed.ComputedFolder;
 import com.cloudbees.hudson.plugins.folder.health.FolderHealthMetric;
 import com.cloudbees.hudson.plugins.folder.health.FolderHealthMetricDescriptor;
+import com.cloudbees.hudson.plugins.folder.icons.OwnFolderIcon;
 import com.cloudbees.hudson.plugins.folder.icons.StockFolderIcon;
 import com.cloudbees.hudson.plugins.folder.views.AbstractFolderViewHolder;
 import com.cloudbees.hudson.plugins.folder.views.DefaultFolderViewHolder;
@@ -317,7 +318,7 @@ public abstract class AbstractFolder<I extends TopLevelItem> extends AbstractIte
     }
 
     protected FolderIcon newDefaultFolderIcon() {
-        return new StockFolderIcon();
+        return new OwnFolderIcon();
     }
 
     protected void initViews(List<View> views) throws IOException {

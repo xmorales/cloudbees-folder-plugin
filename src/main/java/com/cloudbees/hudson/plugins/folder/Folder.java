@@ -389,6 +389,7 @@ public class Folder extends AbstractFolder<TopLevelItem> implements DirectlyModi
             IconSet.icons.addIcon(new Icon("icon-folder-disabled icon-lg", "plugin/cloudbees-folder/images/32x32/folder-disabled.png", Icon.ICON_LARGE_STYLE));
             IconSet.icons.addIcon(new Icon("icon-folder-disabled icon-xlg", "plugin/cloudbees-folder/images/48x48/folder-disabled.png", Icon.ICON_XLARGE_STYLE));
         }
+
     }
 
     private class MixInImpl extends ItemGroupMixIn {
